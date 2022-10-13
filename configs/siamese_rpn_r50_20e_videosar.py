@@ -1,5 +1,5 @@
 # Modified from siamese_rpn_r50_20e_uav123.py
-_base_ = ['./siamese_rpn/siamese_rpn_r50_20e_lasot.py']
+_base_ = './siamese_rpn/siamese_rpn_r50_20e_lasot.py'
 
 # urls
 uav123_ckpt_url = r'https://download.openmmlab.com/mmtracking/sot/' \
@@ -7,6 +7,8 @@ uav123_ckpt_url = r'https://download.openmmlab.com/mmtracking/sot/' \
 
 # model settings
 model = dict(
+    type='SiameseRPN',
+    backbone=dict(init_cfg=dict(_delete_=True)),
     test_cfg=dict(rpn=dict(penalty_k=0.1, window_influence=0.1, lr=0.5)),
     init_cfg=dict(type='Pretrained', checkpoint=uav123_ckpt_url))
 
@@ -40,10 +42,10 @@ train_pipeline = [
     dict(type='SeqDefaultFormatBundle', ref_prefix='search')
 ]
 data = dict(
-    samples_per_gpu=28,
+    samples_per_gpu=56,
     workers_per_gpu=4,
     persistent_workers=True,
-    samples_per_epoch=600000,
+    samples_per_epoch=60000,
     train=dict(
         _delete_=True,
         type='VideoSARDataset',
@@ -51,31 +53,37 @@ data = dict(
         img_prefix=data_root + 'snl_dataset',
         only_eval_visible=False,
         pipeline=train_pipeline,
-        split='train',
+        split='all',
         test_mode=False),
     val=dict(
         type='VideoSARDataset',
         ann_file=data_root + 'snl_dataset/annotations/snl_infos.txt',
         img_prefix=data_root + 'snl_dataset',
         only_eval_visible=False,
-        split='val',
+        split='all',
         test_mode=True),
     test=dict(
         type='VideoSARDataset',
         ann_file=data_root + 'snl_dataset/annotations/snl_infos.txt',
         img_prefix=data_root + 'snl_dataset',
         only_eval_visible=False,
-        split='test',
+        split='all',
         test_mode=True))
 
 # learning policy
 lr_config = dict(
     policy='SiameseRPN',
     lr_configs=[
-        dict(type='step', start_lr_factor=0.2, end_lr_factor=1.0, end_epoch=1),
-        dict(type='log', start_lr_factor=1.0, end_lr_factor=0.1, end_epoch=4),
+        dict(type='step', start_lr_factor=0.2, end_lr_factor=1.0, end_epoch=5),
+        dict(type='log', start_lr_factor=1.0, end_lr_factor=0.1, end_epoch=20),
     ])
-total_epochs = 4
+total_epochs = 20
+evaluation = dict(
+    metric=['track'],
+    interval=1,
+    start=0,
+    rule='greater',
+    save_best='success')
 
 custom_imports = dict(
     imports='sar_track',
