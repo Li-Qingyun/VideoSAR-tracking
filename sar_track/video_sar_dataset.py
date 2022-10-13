@@ -10,7 +10,7 @@ class VideoSARDataset(BaseSOTDataset):
     <>`_.
     """
 
-    def load_data_infos(self, split='test'):
+    def load_data_infos(self, split='all'):
         """Load dataset information.
 
         Args:
