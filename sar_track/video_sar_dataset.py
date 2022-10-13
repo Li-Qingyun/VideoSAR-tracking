@@ -14,7 +14,8 @@ class VideoSARDataset(BaseSOTDataset):
         """Load dataset information.
 
         Args:
-            split (str, optional): Dataset split. Defaults to 'test'.
+            split (str, optional): Dataset split, can be 'left', 'right', and
+                'all'. Defaults to 'all'.
 
         Returns:
             list[dict]: The length of the list is the number of videos. The
@@ -29,6 +30,8 @@ class VideoSARDataset(BaseSOTDataset):
                         'framename_template': the template of image name
                     }
         """
+        assert split in ('all', 'left', 'right')
+
         print('Loading Video SAR dataset...')
         start_time = time.time()
         data_infos = []
@@ -46,4 +49,9 @@ class VideoSARDataset(BaseSOTDataset):
                 framename_template='%04d.jpg')
             data_infos.append(data_info)
         print(f'Video-SAR dataset loaded! ({time.time() - start_time:.2f} s)')
+
+        if split != 'all':
+            data_infos = [data for data in data_infos
+                          if split in data['video_path']]
+
         return data_infos
