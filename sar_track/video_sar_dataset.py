@@ -7,15 +7,17 @@ from mmtrack.datasets import DATASETS, BaseSOTDataset
 class VideoSARDataset(BaseSOTDataset):
     """Video SAR interface of single object tracking.
     Modified from `UAV123Dataset
-    <>`_.
+    <https://github.com/open-mmlab/mmtracking/blob/master/mmtrack/datasets/uav123_dataset.py>`_.  # noqa
     """
+
+    selected_train_targets = ()
 
     def load_data_infos(self, split='all'):
         """Load dataset information.
 
         Args:
-            split (str, optional): Dataset split, can be 'left', 'right', and
-                'all'. Defaults to 'all'.
+            split (str, optional): Dataset split, can be 'left', 'right',
+                'train', 'test', and 'all'. Defaults to 'all'.
 
         Returns:
             list[dict]: The length of the list is the number of videos. The
@@ -30,7 +32,7 @@ class VideoSARDataset(BaseSOTDataset):
                         'framename_template': the template of image name
                     }
         """
-        assert split in ('all', 'left', 'right')
+        assert split in ('all', 'left', 'right', 'train', 'test')
 
         print('Loading Video SAR dataset...')
         start_time = time.time()
@@ -50,8 +52,16 @@ class VideoSARDataset(BaseSOTDataset):
             data_infos.append(data_info)
         print(f'Video-SAR dataset loaded! ({time.time() - start_time:.2f} s)')
 
-        if split != 'all':
+        if split in ('left', 'right'):
             data_infos = [data for data in data_infos
                           if split in data['video_path']]
+        elif split == 'train':
+            data_infos = [data for data in data_infos
+                          if data['video_path'].split('/')[-1]
+                          in self.selected_train_targets]
+        elif split == 'test':
+            data_infos = [data for data in data_infos
+                          if data['video_path'].split('/')[-1]
+                          not in self.selected_train_targets]
 
         return data_infos

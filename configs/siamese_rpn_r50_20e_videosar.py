@@ -53,31 +53,36 @@ data = dict(
         img_prefix=data_root + 'snl_dataset',
         only_eval_visible=False,
         pipeline=train_pipeline,
-        split='all',
+        split='train',
         test_mode=False),
     val=dict(
         type='VideoSARDataset',
         ann_file=data_root + 'snl_dataset/annotations/snl_infos.txt',
         img_prefix=data_root + 'snl_dataset',
         only_eval_visible=False,
-        split='all',
+        split='test',
         test_mode=True),
     test=dict(
         type='VideoSARDataset',
         ann_file=data_root + 'snl_dataset/annotations/snl_infos.txt',
         img_prefix=data_root + 'snl_dataset',
         only_eval_visible=False,
-        split='all',
+        split='test',
         test_mode=True))
 
 # learning policy
 lr_config = dict(
     policy='SiameseRPN',
     lr_configs=[
-        dict(type='step', start_lr_factor=0.2, end_lr_factor=1.0, end_epoch=5),
-        dict(type='log', start_lr_factor=1.0, end_lr_factor=0.1, end_epoch=20),
+        dict(type='step', start_lr_factor=0.2, end_lr_factor=1.0, end_epoch=10),
+        dict(type='log', start_lr_factor=1.0, end_lr_factor=0.1, end_epoch=40),
     ])
-total_epochs = 20
+total_epochs = 40
+
+optimizer = dict(
+    type='SGD',
+    lr=0.001)
+
 evaluation = dict(
     metric=['track'],
     interval=1,
