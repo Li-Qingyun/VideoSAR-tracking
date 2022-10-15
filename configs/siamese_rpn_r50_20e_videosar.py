@@ -42,10 +42,10 @@ train_pipeline = [
     dict(type='SeqDefaultFormatBundle', ref_prefix='search')
 ]
 data = dict(
-    samples_per_gpu=56,
+    samples_per_gpu=28,
     workers_per_gpu=4,
     persistent_workers=True,
-    samples_per_epoch=60000,
+    samples_per_epoch=600000,
     train=dict(
         _delete_=True,
         type='VideoSARDataset',
@@ -74,10 +74,10 @@ data = dict(
 lr_config = dict(
     policy='SiameseRPN',
     lr_configs=[
-        dict(type='step', start_lr_factor=0.2, end_lr_factor=1.0, end_epoch=10),
-        dict(type='log', start_lr_factor=1.0, end_lr_factor=0.1, end_epoch=40),
+        dict(type='step', start_lr_factor=0.2, end_lr_factor=1.0, end_epoch=1),
+        dict(type='log', start_lr_factor=1.0, end_lr_factor=0.1, end_epoch=4),
     ])
-total_epochs = 40
+total_epochs = 4
 
 optimizer = dict(
     type='SGD',
