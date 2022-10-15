@@ -10,7 +10,16 @@ class VideoSARDataset(BaseSOTDataset):
     <https://github.com/open-mmlab/mmtracking/blob/master/mmtrack/datasets/uav123_dataset.py>`_.  # noqa
     """
 
-    selected_train_targets = ()
+    selected_train_targets = [
+        'left_target01', 'left_target02', 'left_target05', 'left_target06',
+        'left_target08', 'left_target09', 'left_target10', 'left_target11',
+        'left_target13', 'left_target15', 'left_target16', 'left_target17',
+        'left_target18', 'left_target19', 'left_target21', 'left_target22',
+        'left_target23', 'left_target25', 'left_target28', 'left_target29',
+        'left_target31',
+        'right_target01', 'right_target02', 'right_target04', 'right_target06',
+        'right_target07', 'right_target09', 'right_target11', 'right_target12',
+        'right_target14']
 
     def load_data_infos(self, split='all'):
         """Load dataset information.
