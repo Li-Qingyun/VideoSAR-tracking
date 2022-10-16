@@ -88,7 +88,8 @@ evaluation = dict(
     interval=1,
     start=0,
     rule='greater',
-    save_best='success')
+    save_best='success',
+    iou_th=[0, 0.50, 0.05])  # NOTICE: You can delete this line to align with CV community.  # noqa
 
 custom_imports = dict(
     imports='sar_track',
