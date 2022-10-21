@@ -1,5 +1,5 @@
 # Modified from mmtrack/core/evaluation/eval_sot_ope.py
-from typing import Union, List, Optional
+from typing import List, Optional, Tuple, Dict
 
 import numpy as np
 from mmtrack.core.evaluation.eval_sot_ope import success_overlap, success_error
@@ -10,7 +10,9 @@ ArrayList = List[np.ndarray]
 def eval_sot_ope(results: List[ArrayList],
                  annotations: ArrayList,
                  visible_infos: Optional[ArrayList] = None,
-                 iou_th: Optional[np.ndarray] = None):
+                 iou_th: Optional[np.ndarray] = None,
+                 pixel_offset_th: Optional[np.ndarray] = None
+                 ) -> Tuple[Dict, Dict]:
     """Evaluation in OPE protocol.
 
     Args:
@@ -25,11 +27,16 @@ def eval_sot_ope(results: List[ArrayList],
             contains the visible information of each video. The ndarray is
             visibility (with bool type) of object in one video. It's in (N,)
             shape. Default to None.
-        iou_th (ndarray | None): The `iou_th` of `success_overlap`. If `None`,
-            the `iou_th` will be `np.arange(0, 1.05, 0.05)`. Default to `None`.
+        iou_th (ndarray | None): The `iou_th` of `success_overlap` for
+            calculating `success`. If `None`, the `iou_th` will be
+            `np.arange(0, 1.05, 0.05)`. Default to `None`.
+        pixel_offset_th (ndarray | None): The `pixel_offset_th` of
+            `success_error` for calculating `precision` and `normed precision`.
+            If `None`, the `pixel_offset_th` will be `np.arange(0, 51, 1)`.
+            Default to `None`.
 
     Returns:
-        dict[str, float]: OPE style evaluation metric (i.e. success,
+        tuple[dict[str, float]]: OPE style evaluation metric (i.e. success,
         norm precision and precision).
     """
     success_results = []
@@ -59,7 +66,8 @@ def eval_sot_ope(results: List[ArrayList],
         pred_bboxes_center = np.array(
             (0.5 * (pred_bboxes[:, 2] + pred_bboxes[:, 0]),
              0.5 * (pred_bboxes[:, 3] + pred_bboxes[:, 1]))).T
-        pixel_offset_th = np.arange(0, 51, 1)
+        if pixel_offset_th is None:
+            pixel_offset_th = np.arange(0, 51, 1)
         precision_results.append(
             success_error(gt_bboxes_center, pred_bboxes_center,
                           pixel_offset_th, video_length))
@@ -79,4 +87,13 @@ def eval_sot_ope(results: List[ArrayList],
     norm_precision = np.mean(norm_precision_results, axis=0)[20] * 100
     eval_results = dict(
         success=success, norm_precision=norm_precision, precision=precision)
-    return eval_results
+    meta_results = dict(success=dict(results=success_results,
+                                     threshold=iou_th,
+                                     threshold_name='iou_th'),
+                        norm_precision=dict(results=norm_precision_results,
+                                            threshold=norm_pixel_offset_th,
+                                            threshold_name='norm_pixel_offset_th'),  # noqa
+                        precision=dict(results=precision_results,
+                                       threshold=pixel_offset_th,
+                                       threshold_name='pixel_offset_th'))
+    return eval_results, meta_results

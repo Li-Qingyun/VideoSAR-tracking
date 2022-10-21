@@ -1,7 +1,10 @@
 import os
-import time
+from pathlib import Path, PosixPath
+from time import time, strftime, localtime
 
 import numpy as np
+
+import torch
 from mmcv import print_log
 from mmtrack.datasets import DATASETS, BaseSOTDataset
 
@@ -49,7 +52,7 @@ class VideoSARDataset(BaseSOTDataset):
         assert split in ('all', 'left', 'right', 'train', 'test')
 
         print('Loading Video SAR dataset...')
-        start_time = time.time()
+        start_time = time()
         data_infos = []
         data_infos_str = self.loadtxt(
             self.ann_file, return_array=False).split('\n')
@@ -64,7 +67,7 @@ class VideoSARDataset(BaseSOTDataset):
                 end_frame_id=int(line[3]),
                 framename_template='%04d.jpg')
             data_infos.append(data_info)
-        print(f'Video-SAR dataset loaded! ({time.time() - start_time:.2f} s)')
+        print(f'Video-SAR dataset loaded! ({time() - start_time:.2f} s)')
 
         if split in ('left', 'right'):
             data_infos = [data for data in data_infos
@@ -80,25 +83,44 @@ class VideoSARDataset(BaseSOTDataset):
 
         return data_infos
 
-    def evaluate(self, results, metric=None, iou_th=None, logger=None):
+    def evaluate(self, results, metric=None,
+                 iou_th=None, pixel_offset_th=None, meta_save_dir=None,
+                 logger=None):
         """Default evaluation standard is OPE.
 
         Args:
-            results (dict(list[ndarray])): tracking results. The ndarray is in
+            results (dict(list[ndarray])): Tracking results. The ndarray is in
                 (x1, y1, x2, y2, score) format.
-            metric (list, optional): defaults to ['track'].
+            metric (list, optional): Defaults to ['track'].
             iou_th (ndarray | list | tuple | None): The `iou_th` of
-                `success_overlap`. If `None`, the `iou_th` will be
-                `np.arange(0, 1.05, 0.05)`. if list or tuple is input,
-                the `iou_th` will be `np.arange(*iou_th)`. Default to `None`.
-            logger (logging.Logger | str | None, optional): defaults to None.
+                `success_overlap` for calculating `success`. If `None`, the
+                `iou_th` will be `np.arange(0, 1.05, 0.05)`. if list or tuple
+                is input, the `iou_th` will be `np.arange(*iou_th)`. Defaults
+                to `None`.
+            pixel_offset_th (ndarray | list | tuple | None): The
+                `pixel_offset_th` of `success_error` for calculating
+                `precision` and `normed precision`. If `None`, the
+                `pixel_offset_th` will be `np.arange(0, 51, 1)`. if
+                list or tuple is input, the `pixel_offset_th` will be
+                `np.arange(*pixel_offset_th)`. Defaults to `None`.
+            logger (logging.Logger | str | None, optional): Defaults to None.
+            meta_save_dir (str | Path | PosixPath | None, optional): Folder
+                path to save the 'track_meta_results'.
         """
+        if isinstance(meta_save_dir, str):
+            meta_save_dir = Path(meta_save_dir)
+        else:
+            assert isinstance(meta_save_dir, Path) or meta_save_dir is None, \
+                'meta_save_dir must be Path obj, or ' \
+                'PosixPath obj, or str, or None.'
 
         if metric is None:
             metric = ['track']
 
         if isinstance(iou_th, (list, tuple)):
             iou_th = np.arange(*iou_th)
+        if isinstance(pixel_offset_th, (list, tuple)):
+            pixel_offset_th = np.arange(*pixel_offset_th)
 
         if isinstance(metric, list):
             metrics = metric
@@ -139,15 +161,25 @@ class VideoSARDataset(BaseSOTDataset):
             if not self.only_eval_visible:
                 visible_infos = None
             # evaluation
-            track_eval_results = eval_sot_ope(
+            track_eval_results, track_meta_results = eval_sot_ope(
                 results=track_bboxes,
                 annotations=gt_bboxes,
                 visible_infos=visible_infos,
-                iou_th=iou_th)
+                iou_th=iou_th,
+                pixel_offset_th=pixel_offset_th)
             eval_results.update(track_eval_results)
 
             for k, v in eval_results.items():
                 if isinstance(v, float):
                     eval_results[k] = float(f'{v :.3f}')
             print_log(eval_results, logger=logger)
+
+            if meta_save_dir is not None:
+                assert isinstance(meta_save_dir, (Path, PosixPath)), type(meta_save_dir)  # noqa
+                meta_save_dir.mkdir(exist_ok=True, parents=True)
+                now = strftime('%Y-%m-%d-%H_%M_%S', localtime(time()))
+                name = f"eval_meta_{now}.pth"
+                meta_save_path = meta_save_dir / name
+                torch.save(track_meta_results, str(meta_save_path))
+
         return eval_results
