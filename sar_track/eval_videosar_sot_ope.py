@@ -2,7 +2,7 @@
 from typing import List, Optional, Tuple, Dict
 
 import numpy as np
-from mmtrack.core.evaluation.eval_sot_ope import success_overlap, success_error
+from mmtrack.core.evaluation.eval_sot_ope import success_error, bbox_overlaps
 
 ArrayList = List[np.ndarray]
 
@@ -97,3 +97,32 @@ def eval_sot_ope(results: List[ArrayList],
                                        threshold=pixel_offset_th,
                                        threshold_name='pixel_offset_th'))
     return eval_results, meta_results
+
+
+def success_overlap(gt_bboxes, pred_bboxes, iou_th, video_length):
+    """Modified from mmtrack/core/evaluation/eval_sot_ope.py
+    Evaluation based on iou.
+
+    Args:
+        gt_bboxes (ndarray): of shape (video_length, 4) in
+            [tl_x, tl_y, br_x, br_y] format.
+        pred_bboxes (ndarray): of shape (video_length, 4) in
+            [tl_x, tl_y, br_x, br_y] format.
+        iou_th (ndarray): Different threshold of iou. Typically is set to
+            `np.arange(0, 1.05, 0.05)`.
+        video_length (int): Video length.
+
+    Returns:
+        ndarray: The evaluation results at different threshold of iou.
+    """
+    success = np.zeros(len(iou_th))
+    iou = np.ones(len(gt_bboxes)) * (-1)
+    valid = (gt_bboxes[:, 2] > gt_bboxes[:, 0]) & (
+        gt_bboxes[:, 3] > gt_bboxes[:, 1])
+    iou_matrix = bbox_overlaps(gt_bboxes[valid], pred_bboxes[valid])
+    iou[valid] = iou_matrix[np.arange(len(gt_bboxes[valid])),
+                            np.arange(len(gt_bboxes[valid]))]
+
+    for i in range(len(iou_th)):
+        success[i] = np.sum(iou > iou_th[i]) / float(video_length)
+    return success
